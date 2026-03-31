@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* ================== جميع الأنماط الأصلية ================== */
+        /* ================== جميع الأنماط الأصلية (كاملة) ================== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
         body { background-color: #f4f7fc; color: #1e293b; line-height: 1.6; user-select: none; }
         :root {
@@ -251,7 +251,7 @@
         }
         loadGitHubConfig();
 
-        // ================== البيانات التجريبية الافتراضية ==================
+        // ================== البيانات التجريبية ==================
         const defaultData = {
             header: {
                 title: "مجمع أسواق ريادة المستهلك",
@@ -335,9 +335,9 @@
                 ]
             },
             testimonials: [
-                { name: "مستخدم 1", image: "https://picsum.photos/seed/user0/100/100", rating: 5, review: "تجربة رائعة مع هذا الموقع." },
-                { name: "مستخدم 2", image: "https://picsum.photos/seed/user1/100/100", rating: 5, review: "تجربة رائعة مع هذا الموقع." },
-                { name: "مستخدم 3", image: "https://picsum.photos/seed/user2/100/100", rating: 4, review: "تجربة رائعة مع هذا الموقع." }
+                { name: "أحمد", image: "https://randomuser.me/api/portraits/men/1.jpg", rating: 5, review: "تجربة رائعة مع هذا الموقع." },
+                { name: "سارة", image: "https://randomuser.me/api/portraits/women/2.jpg", rating: 5, review: "منصة ممتازة للتسوق." },
+                { name: "محمد", image: "https://randomuser.me/api/portraits/men/3.jpg", rating: 4, review: "خدمة سريعة ومنتجات عالية الجودة." }
             ],
             footer: {
                 email: "ramzealsalhy@gmail.com",
@@ -373,12 +373,372 @@
 
         // ================== دوال مساعدة ==================
         function showLoadingScreen() {
-            const overlay = document.createElement('div');
-            overlay.id = 'loadingOverlay';
-            overlay.className = 'loading-overlay';
-            overlay.innerHTML = `<div class="loading-spinner"></div><p style="color:white; margin-top:20px;">جاري تحميل البيانات...</p>`;
-            document.body.appendChild(overlay);
+            let overlay = document.getElementById('loadingOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'loadingOverlay';
+                overlay.className = 'loading-overlay';
+                overlay.innerHTML = `<div class="loading-spinner"></div><p style="color:white; margin-top:20px;">جاري تحميل البيانات...</p>`;
+                document.body.appendChild(overlay);
+            }
+            overlay.style.display = 'flex';
         }
+        function hideLoadingScreen() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+        function showInfoToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'info-toast';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // تحميل البيانات من GitHub مع إعادة المحاولة
+        async function loadDataFromGitHub(retries = 3, delay = 2000) {
+            if (!GITHUB_CONFIG.owner || !GITHUB_CONFIG.repo) {
+                showInfoToast('⚠️ لم يتم إعداد الإعدادات بعد. سيتم عرض المحتوى التجريبي.');
+                return null;
+            }
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                    const response = await fetch(GITHUB_CONFIG.rawUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    return data;
+                } catch (err) {
+                    console.error(`محاولة ${attempt} فشلت:`, err);
+                    if (attempt === retries) {
+                        showInfoToast('⚠️ تعذر الاتصال بالخادم. جاري عرض المحتوى التجريبي.');
+                        return null;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            return null;
+        }
+
+        function enhanceData(data) {
+            if (!data.settings) data.settings = defaultData.settings;
+            if (!data.carousel) data.carousel = [];
+            if (!data.messages) data.messages = [];
+            for (let cat in data.stores) {
+                data.stores[cat].forEach(store => {
+                    if (store.ownerCode === undefined) store.ownerCode = "";
+                    if (store.allowUpload === undefined) store.allowUpload = false;
+                    if (!store.productDisplayMode) store.productDisplayMode = "grid";
+                    if (!store.productDisplayCount) store.productDisplayCount = 10;
+                    if (!store.numStrips) store.numStrips = 10;
+                });
+            }
+            return data;
+        }
+
+        // ================== تطبيق إعدادات التصميم ==================
+        function applyDesignSettings() {
+            if (!appData || !appData.design) return;
+            const d = appData.design;
+            document.documentElement.style.setProperty('--category-bg', d.categoryBg || 'linear-gradient(145deg, #f9eef7, #f3d9e8)');
+            document.documentElement.style.setProperty('--category-text', d.categoryText || '#9b4d96');
+            document.documentElement.style.setProperty('--category-font-size', d.categoryFontSize || '2rem');
+            document.documentElement.style.setProperty('--store-bg', d.storeBg || '#ffffff');
+            document.documentElement.style.setProperty('--store-text', d.storeText || '#1e293b');
+            document.documentElement.style.setProperty('--store-font-size', d.storeFontSize || '1.3rem');
+            document.documentElement.style.setProperty('--product-bg', d.productBg || '#ffffff');
+            document.documentElement.style.setProperty('--product-text', d.productText || '#1e293b');
+            document.documentElement.style.setProperty('--product-font-size', d.productFontSize || '0.85rem');
+            document.documentElement.style.setProperty('--ad-bg', d.adBg || 'linear-gradient(90deg, #fbbf24, #f59e0b)');
+            document.documentElement.style.setProperty('--ad-text', d.adText || '#0f172a');
+            document.documentElement.style.setProperty('--ad-font-size', d.adFontSize || '1.1rem');
+            document.documentElement.style.setProperty('--general-font-size', d.generalFontSize || '1rem');
+        }
+
+        // ================== تدوير خلفية الهيدر ==================
+        let headerInterval;
+        function startHeaderInterval() {
+            if (headerInterval) clearInterval(headerInterval);
+            const images = appData?.header?.images || defaultData.header.images;
+            if (!images.length) return;
+            let idx = 0;
+            const header = document.getElementById('mainHeader');
+            if (!header) return;
+            header.style.backgroundImage = `url(${images[0]})`;
+            headerInterval = setInterval(() => {
+                idx = (idx + 1) % images.length;
+                header.style.backgroundImage = `url(${images[idx]})`;
+            }, 5000);
+        }
+
+        // ================== عرض الصفحة الرئيسية ==================
+        function renderHomePage() {
+            const homeDiv = document.getElementById('homePage');
+            if (!homeDiv) return;
+            homeDiv.classList.remove('hidden');
+            const categoryPage = document.getElementById('categoryPage');
+            const storePage = document.getElementById('storePage');
+            const searchPage = document.getElementById('searchPage');
+            const profilePage = document.getElementById('profilePage');
+            const contactPage = document.getElementById('contactPage');
+            if (categoryPage) categoryPage.classList.add('hidden');
+            if (storePage) storePage.classList.add('hidden');
+            if (searchPage) searchPage.classList.add('hidden');
+            if (profilePage) profilePage.classList.add('hidden');
+            if (contactPage) contactPage.classList.add('hidden');
+
+            // عرض التصنيفات
+            const catsContainer = document.getElementById('categoriesContainer');
+            if (catsContainer) {
+                catsContainer.innerHTML = '';
+                (appData.categories || []).forEach(cat => {
+                    const section = document.createElement('div');
+                    section.className = 'category-section';
+                    section.style.background = `var(--category-bg)`;
+                    section.innerHTML = `
+                        <div class="category-header">
+                            <h2 class="category-title" style="color:var(--category-text); font-size:var(--category-font-size);">
+                                <i class="${cat.icon}"></i> ${cat.name}
+                            </h2>
+                            ${cat.featuredImage ? `<img src="${cat.featuredImage}" class="category-featured-image">` : ''}
+                        </div>
+                        <div class="stores-grid" id="stores-grid-${cat.id}"></div>
+                    `;
+                    catsContainer.appendChild(section);
+                    // عرض المتاجر لهذه الفئة
+                    const storesGrid = document.getElementById(`stores-grid-${cat.id}`);
+                    if (storesGrid && appData.stores[cat.name]) {
+                        storesGrid.innerHTML = '';
+                        appData.stores[cat.name].forEach(store => {
+                            if (store.hidden) return;
+                            const storeCard = document.createElement('div');
+                            storeCard.className = 'store-card';
+                            storeCard.onclick = () => showStorePage(store);
+                            storeCard.innerHTML = `
+                                <div class="store-header">
+                                    <img src="${store.logo}" class="store-logo">
+                                    <div class="store-info">
+                                        <h3 style="font-size:var(--store-font-size); color:var(--store-text);">${store.name}</h3>
+                                        <span class="store-category-badge" style="background:${cat.color}20; color:${cat.color};">${cat.name}</span>
+                                    </div>
+                                    <button class="store-visit-btn" onclick="event.stopPropagation(); window.open('${store.externalUrl}', '_blank');"><i class="fas fa-external-link-alt"></i> زيارة</button>
+                                </div>
+                            `;
+                            storesGrid.appendChild(storeCard);
+                        });
+                    }
+                });
+            }
+
+            // عرض الشهادات
+            const testimonialsTrack = document.getElementById('testimonialsTrack');
+            if (testimonialsTrack && appData.testimonials) {
+                testimonialsTrack.innerHTML = '';
+                appData.testimonials.forEach(t => {
+                    const card = document.createElement('div');
+                    card.className = 'testimonial-card';
+                    card.innerHTML = `
+                        <img src="${t.image}" class="customer-img">
+                        <h4>${t.name}</h4>
+                        <div>${'★'.repeat(t.rating)}${'☆'.repeat(5-t.rating)}</div>
+                        <p>${t.review}</p>
+                    `;
+                    testimonialsTrack.appendChild(card);
+                });
+            }
+
+            // عرض شارات الثقة
+            const trustContainer = document.getElementById('trustBadgesContainer');
+            if (trustContainer && appData.settings.trustBadges) {
+                trustContainer.innerHTML = '';
+                appData.settings.trustBadges.forEach(badge => {
+                    trustContainer.innerHTML += `<img src="${badge}" alt="badge">`;
+                });
+            }
+
+            // عرض الفوتر
+            const footerSection = document.getElementById('footerSection');
+            if (footerSection && appData.footer) {
+                footerSection.innerHTML = `
+                    <div>
+                        <h3>تواصل معنا</h3>
+                        <p>${appData.footer.email}</p>
+                        <p>${appData.footer.phone}</p>
+                        <div class="social-icons">
+                            ${(appData.footer.social || []).map(s => `<a href="${s.url}" target="_blank"><i class="${s.icon}"></i></a>`).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <h3>طرق الدفع</h3>
+                        <div class="payment-methods">
+                            ${(appData.footer.payments || []).map(p => `<i class="${p}"></i>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // ================== عرض صفحة المتجر ==================
+        function showStorePage(store) {
+            const storePage = document.getElementById('storePage');
+            const homePage = document.getElementById('homePage');
+            if (!storePage) return;
+            homePage?.classList.add('hidden');
+            storePage.classList.remove('hidden');
+            storePage.innerHTML = `
+                <div class="container" style="padding:20px;">
+                    <button class="back-home-btn" onclick="showHomePage()"><i class="fas fa-arrow-right"></i> العودة للرئيسية</button>
+                    <div class="store-header" style="margin-bottom:20px;">
+                        <img src="${store.logo}" style="width:100px; height:100px; border-radius:20px;">
+                        <h2>${store.name}</h2>
+                        <p>${store.description || ''}</p>
+                        <p><i class="fas fa-phone"></i> ${store.phone || ''}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${store.address || ''}</p>
+                    </div>
+                    <div id="store-products-grid" class="stores-grid"></div>
+                </div>
+            `;
+            const productsGrid = document.getElementById('store-products-grid');
+            if (productsGrid && appData.products[store.id]) {
+                productsGrid.innerHTML = '';
+                appData.products[store.id].forEach(prod => {
+                    const prodCard = document.createElement('div');
+                    prodCard.className = 'product-item';
+                    prodCard.onclick = () => showProductModal(prod);
+                    prodCard.innerHTML = `
+                        <img src="${prod.image}">
+                        <div class="product-name">${prod.name}</div>
+                        <div class="price-container">
+                            ${prod.oldPrice ? `<span class="old-price">${prod.oldPrice} ${getCurrencySymbol()}</span>` : ''}
+                            <span class="new-price">${prod.newPrice} ${getCurrencySymbol()}</span>
+                        </div>
+                        <button class="add-to-cart-btn" onclick="event.stopPropagation(); addToCart(prod, '${store.name}');">➕ أضف للسلة</button>
+                    `;
+                    productsGrid.appendChild(prodCard);
+                });
+            }
+        }
+
+        // ================== عرض نافذة المنتج ==================
+        function showProductModal(product) {
+            const modal = document.getElementById('productModal');
+            const modalContent = document.getElementById('productModalContent');
+            if (!modal || !modalContent) return;
+            document.getElementById('modalProductImage').src = product.image;
+            document.getElementById('modalProductName').innerText = product.name;
+            document.getElementById('modalProductPrice').innerHTML = `
+                ${product.oldPrice ? `<span class="old-price">${product.oldPrice} ${getCurrencySymbol()}</span>` : ''}
+                <span class="new-price">${product.newPrice} ${getCurrencySymbol()}</span>
+            `;
+            document.getElementById('modalProductDescription').innerText = product.description || 'منتج مميز';
+            document.getElementById('modalProductLink').href = product.link || '#';
+            const addBtn = document.getElementById('modalAddToCart');
+            addBtn.onclick = () => addToCart(product, '');
+            modal.classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal')?.classList.add('hidden');
+        }
+
+        // ================== عربة التسوق ==================
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        function updateCartDisplay() {
+            const cartCountSpan = document.getElementById('cartCount');
+            if (cartCountSpan) cartCountSpan.innerText = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const cartItemsDiv = document.getElementById('cartItems');
+            if (!cartItemsDiv) return;
+            if (cart.length === 0) {
+                cartItemsDiv.innerHTML = '<p>السلة فارغة</p>';
+                document.getElementById('cartTotal').innerText = 'الإجمالي: 0';
+                return;
+            }
+            let total = 0;
+            cartItemsDiv.innerHTML = '';
+            cart.forEach((item, idx) => {
+                total += item.price * item.quantity;
+                cartItemsDiv.innerHTML += `
+                    <div class="cart-item">
+                        <img src="${item.image}" style="width:50px;height:50px;">
+                        <div class="cart-item-details">
+                            <div class="cart-item-name">${item.name}</div>
+                            <div class="cart-item-price">${item.price} ${getCurrencySymbol()}</div>
+                            <div>الكمية: ${item.quantity}</div>
+                        </div>
+                        <div class="cart-item-remove" onclick="removeFromCart(${idx})"><i class="fas fa-trash"></i></div>
+                    </div>
+                `;
+            });
+            document.getElementById('cartTotal').innerText = `الإجمالي: ${total} ${getCurrencySymbol()}`;
+        }
+
+        function addToCart(product, storeName) {
+            if (!appData.settings.cartEnabled) {
+                showInfoToast('عذراً، سلة التسوق معطلة حالياً');
+                return;
+            }
+            const existing = cart.find(item => item.id === product.id);
+            if (existing) existing.quantity++;
+            else cart.push({ id: product.id, name: product.name, price: product.newPrice, image: product.image, quantity: 1, store: storeName });
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartDisplay();
+            showInfoToast('تمت الإضافة إلى السلة');
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartDisplay();
+        }
+
+        // ================== دوال عامة ==================
+        function getCurrencySymbol() {
+            return appData?.settings?.currency === 'SAR' ? '﷼' : '$';
+        }
+
+        function showHomePage() {
+            renderHomePage();
+        }
+
+        function refreshData() {
+            location.reload(); // بسيط: إعادة تحميل الصفحة
+        }
+
+        // ================== تهيئة وبدء التشغيل ==================
+        let appData = null;
+        (async function() {
+            showLoadingScreen();
+            const githubData = await loadDataFromGitHub();
+            if (githubData) {
+                appData = enhanceData(githubData);
+                showInfoToast('✅ تم تحميل البيانات بنجاح');
+            } else {
+                appData = enhanceData(defaultData);
+                showInfoToast('📢 جاري عرض المحتوى التجريبي. يمكنك تعديله من لوحة التحكم.');
+            }
+            hideLoadingScreen();
+            applyDesignSettings();
+            startHeaderInterval();
+            renderHomePage();
+            updateCartDisplay();
+            // إضافة مستمع لحدث النقر على أيقونة السلة
+            const cartIcon = document.getElementById('cartIcon');
+            if (cartIcon) cartIcon.onclick = () => document.getElementById('cartSidebar')?.classList.toggle('open');
+            const closeCart = document.getElementById('closeCart');
+            if (closeCart) closeCart.onclick = () => document.getElementById('cartSidebar')?.classList.remove('open');
+        })();
+
+        // جعل بعض الدوال عامة للاستخدام في onclick
+        window.showHomePage = showHomePage;
+        window.showStorePage = showStorePage;
+        window.showProductModal = showProductModal;
+        window.closeProductModal = closeProductModal;
+        window.addToCart = addToCart;
+        window.removeFromCart = removeFromCart;
+        window.refreshData = refreshData;
+        window.applyDesignSettings = applyDesignSettings; // جعلها متاحة للاستدعاء من admin.html
+    </script>
+</body>
+                                                                                                                                                                                                                                                                                                             </html>
 
         function hideLoadingScreen() {
             const el = document.getElementById('loadingOverlay');
